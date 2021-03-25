@@ -14,9 +14,10 @@ cd ../../../..
 REM Build a custom JRE runtime
 REM jdeps --list-deps all.jar
 REM java.base
+REM java.desktop
 cd buildWindows
 echo   Building a custom JRE runtime...
-jlink --no-header-files --no-man-pages --compress=2 --strip-debug --add-modules java.base --output java-runtime
+jlink --no-header-files --no-man-pages --compress=2 --strip-debug --add-modules java.base,java.desktop --output java-runtime
 
 REM Add launchers and package the project
 echo   Creating launcher scripts...

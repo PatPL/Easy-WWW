@@ -25,9 +25,10 @@ cd ../../../..
 # Build a custom JRE runtime
 # jdeps --list-deps all.jar
 # java.base
+# java.desktop
 cd buildLinux
 echo "  Building a custom JRE runtime..."
-jlink --no-header-files --no-man-pages --compress=2 --strip-debug --add-modules java.base --output java-runtime
+jlink --no-header-files --no-man-pages --compress=2 --strip-debug --add-modules java.base,java.desktop --output java-runtime
 # Debian somehow causes jlink to output object files with debug symbols
 # https://github.com/docker-library/openjdk/issues/217
 # https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=905575
