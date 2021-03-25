@@ -1,3 +1,3 @@
 #!/bin/bash
 
-./java -cp Easy-WWW.jar WebServer
+./java-runtime/bin/java -cp Easy-WWW.jar WebServer
