@@ -1,15 +1,13 @@
 import enums.Status;
 
+import java.awt.*;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.InetAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
+import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import java.util.concurrent.atomic.AtomicReference;
 
 public class WebServer {
     
@@ -228,62 +226,22 @@ public class WebServer {
         client.close ();
     }
     
-    public static void main (String[] args) {
+    public static void main (String[] args) throws URISyntaxException, IOException {
         WebServer s;
         try {
-            s = new WebServer ("127.0.0.1", 80);
+            s = new WebServer (Config.getString (ConfigEntry.address), Config.getInteger (ConfigEntry.port));
         } catch (IOException e) {
             System.out.printf ("Couldn't start the server.\n%s\n", e);
             return;
         }
         
-        // Simple usage examples
-        s.addHandler ("/random", (Request req, Response res) -> {
-            res.setStatus ((int) Math.floor (Math.random () * 400 + 200), "Random status code");
-            res.setBody (String.valueOf (Math.random ()), Response.BodyType.Text);
-            return true;
-        });
-        
-        s.addHandler ("/", (Request req, Response res) -> {
-            res.setStatus (Status.OK_200);
-            res.setBody ("Domyślny handler. Polskie znaki: ąęćżźńłó", Response.BodyType.Text);
-            return true;
-        });
-        
-        s.addHandler ("/marquee", (Request req, Response res) -> {
-            res.setStatus (Status.OK_200);
-            res.setBody (String.format ("<marquee style='font-family: Verdana;'>%s</marquee>", req.URI), Response.BodyType.HTML);
-            return true;
-        });
-        
-        s.addHandler ("/four", (Request req, Response res) -> {
-            res.setStatus (Status.OK_200);
-            res.setBody ("<h1>4</h1>", Response.BodyType.HTML);
-            return true;
-        });
-        
-        s.addHandler ("/zero", (Request req, Response res) -> {
-            res.setStatus (Status.OK_200);
-            res.setBody ("<h1>0</h1>", Response.BodyType.HTML);
-            return true;
-        });
-        
-        AtomicReference<String> data = new AtomicReference<> ("");
-        s.addHandler ("/set", (Request req, Response res) -> {
-            res.setStatus (Status.Accepted_202);
-            data.set (req.URI);
-            res.setBody ("data set", Response.BodyType.HTML);
-            return true;
-        });
-        
-        s.addHandler ("/get", (Request req, Response res) -> {
-            res.setStatus (Status.OK_200);
-            res.setBody (String.format ("data: %s", data.get ()), Response.BodyType.HTML);
-            return true;
-        });
-        
         s.start ();
         System.out.printf ("Started server at %s\n", s.getAddress ());
+        
+        if (Config.getBoolean (ConfigEntry.openInBrowser) && Desktop.isDesktopSupported ()) {
+            Desktop.getDesktop ().browse (new URI (String.format ("http://%s", s.getAddress ())));
+        }
+        
     }
     
 }
