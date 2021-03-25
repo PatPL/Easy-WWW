@@ -1,4 +1,3 @@
 #!/bin/bash
-cd java-runtime/bin
 
-./java -cp all.jar WebServer
+./java -cp Easy-WWW.jar WebServer

@@ -18,8 +18,8 @@ mkdir buildLinux
 # Package the project into a .jar
 cd Easy-WWW/out/production/Easy-WWW
 echo "  Packaging the project into a jar file..."
-jar -cvf all.jar * > /dev/null
-mv all.jar ../../../../buildLinux
+jar -cvf Easy-WWW.jar * > /dev/null
+mv Easy-WWW.jar ../../../../buildLinux
 cd ../../../..
 
 # Build a custom JRE runtime
@@ -42,12 +42,12 @@ echo "  Creating launcher scripts..."
 cp ../buildResources/startServer.sh ./
 
 echo "  Compressing everything into a 7z archive..."
-mv all.jar java-runtime/bin
-7z a -bso0 -bsp0 all-build-Linux java-runtime startServer.sh
+7z a -bso0 -bsp0 all-build-Linux java-runtime startServer.sh Easy-WWW.jar
 
 # Cleanup
 echo "  Final cleanup..."
 rm -rf startServer.sh
+rm -rf Easy-WWW.jar
 rm -rf java-runtime
 
 exec_time=$((($(date +%s%N) - exec_start) / 1000000))

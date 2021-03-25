@@ -7,8 +7,8 @@ mkdir buildWindows
 REM Package the project into a .jar
 cd Easy-WWW\out\production\Easy-WWW
 echo   Packaging the project into a jar file...
-jar -cvf all.jar * > nul
-move all.jar ../../../../buildWindows/all.jar > nul
+jar -cvf Easy-WWW.jar * > nul
+move Easy-WWW.jar ../../../../buildWindows/Easy-WWW.jar > nul
 cd ../../../..
 
 REM Build a custom JRE runtime
@@ -23,12 +23,12 @@ echo   Creating launcher scripts...
 copy ..\buildResources\startServer.bat . > nul
 
 echo   Compressing everything into a zip archive...
-move all.jar java-runtime/bin/all.jar > nul
-tar -acf all-build-Windows.zip java-runtime startServer.bat
+tar -acf all-build-Windows.zip java-runtime startServer.bat Easy-WWW.jar
 
 REM Cleanup
 echo   Final cleanup...
 del startServer.bat
+del Easy-WWW.jar
 rd /s /q java-runtime
 
 echo   Done.
