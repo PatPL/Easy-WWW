@@ -4,12 +4,17 @@ REM Clean previous folder
 rd /s /q buildWindows
 mkdir buildWindows
 
+REM Compile all source files
+cd Easy-WWW\src
+echo   Compiling the source files...
+javac -d out *.java
+
 REM Package the project into a .jar
-cd Easy-WWW\out\production\Easy-WWW
+cd out
 echo   Packaging the project into a jar file...
 jar -cvf Easy-WWW.jar * > nul
-move Easy-WWW.jar ../../../../buildWindows/Easy-WWW.jar > nul
-cd ../../../..
+move Easy-WWW.jar ../../../buildWindows/Easy-WWW.jar > nul
+cd ../../..
 
 REM Build a custom JRE runtime
 REM jdeps --list-deps all.jar
@@ -31,6 +36,7 @@ echo   Final cleanup...
 del startServer.bat
 del Easy-WWW.jar
 rd /s /q java-runtime
+rd /s /q ..\Easy-WWW\src\out
 
 echo   Done.
 pause

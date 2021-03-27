@@ -15,12 +15,17 @@ exec_start=$(date +%s%N)
 rm -rf buildLinux
 mkdir buildLinux
 
+# Compile all source files
+cd Easy-WWW/src
+echo "  Compiling the source files..."
+javac -d out *.java
+
 # Package the project into a .jar
-cd Easy-WWW/out/production/Easy-WWW
+cd out
 echo "  Packaging the project into a jar file..."
 jar -cvf Easy-WWW.jar * > /dev/null
-mv Easy-WWW.jar ../../../../buildLinux
-cd ../../../..
+mv Easy-WWW.jar ../../../buildLinux
+cd ../../..
 
 # Build a custom JRE runtime
 # jdeps --list-deps all.jar
@@ -50,6 +55,7 @@ echo "  Final cleanup..."
 rm -rf startServer.sh
 rm -rf Easy-WWW.jar
 rm -rf java-runtime
+rm -rf ../Easy-WWW/src/out
 
 exec_time=$((($(date +%s%N) - exec_start) / 1000000))
 printf "  Done in $((exec_time / 1000))."
