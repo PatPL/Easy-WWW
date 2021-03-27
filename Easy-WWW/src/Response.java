@@ -1,7 +1,10 @@
 import enums.Status;
 import enums.StatusType;
 
+import java.io.File;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -179,8 +182,45 @@ public class Response {
                 // It will only use binaryBody, if body == null
                 body = null;
                 
-                setStatus (Status.NotImplemented_501);
-                System.out.println ("Path bodies not yet implemented");
+                if (value.equals ("")) {
+                    value = ".";
+                }
+                
+                if (value.startsWith ("/")) {
+                    value = String.format (".%s", value);
+                }
+                
+                Path path = Path.of (value).toAbsolutePath ().normalize ();
+                String pathString = path.toString ();
+                
+                // While it will also falsely 'find' extensions if both the directory name has a dot,
+                // and the file has no extension, in that case we still want no extension (default case)
+                // Same thing when the entire path has no dots (The entire path will be passed = default case)
+                
+                setContentType (getMimeFromExtension (pathString.substring (pathString.lastIndexOf (".") + 1)));
+                
+                File file = new File (pathString);
+                
+                if (file.exists ()) {
+                    if (file.isDirectory ()) {
+                        setStatus (Status.NotImplemented_501);
+                        setBody (String.format ("Resource <b>%s</b> is a directory. No support for that yet", value), BodyType.HTML);
+                    } else {
+                        // It's a file
+                        try {
+                            binaryBody = Files.readAllBytes (path);
+                            setStatus (Status.OK_200);
+                        } catch (Exception e) {
+                            setStatus (Status.InternalServerError_500);
+                            setBody (String.format ("There was an error while fetching resource <b>%s</b>", value), BodyType.HTML);
+                            e.printStackTrace ();
+                        }
+                    }
+                } else {
+                    setStatus (Status.NotFound_404);
+                    setBody (String.format ("Resource <b>%s</b> doesn't exist", value), BodyType.HTML);
+                }
+                
                 break;
         }
     }
@@ -241,87 +281,89 @@ public class Response {
             output.append (body);
         }
         
-        return output.toString ().strip ();
+        // Trailing whitespace required for binary bodies, also could be part of the body itself
+        return output.toString ().stripLeading ();
     }
-
-//	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Complete_list_of_MIME_types
-//	private String getMimeFromExtension(String extension) {
-//		return switch(extension) {
-//			case ".aac" -> "audio/aac";
-//			case ".abw" -> "application/x-abiword";
-//			case ".arc" -> "application/x-freearc";
-//			case ".avi" -> "video/x-msvideo";
-//			case ".azw" -> "application/vnd.amazon.ebook";
-//			case ".bin" -> "application/octet-stream";
-//			case ".bmp" -> "image/bmp";
-//			case ".bz" -> "application/x-bzip";
-//			case ".bz2" -> "application/x-bzip2";
-//			case ".csh" -> "application/x-csh";
-//			case ".css" -> "text/css";
-//			case ".csv" -> "text/csv";
-//			case ".doc" -> "application/msword";
-//			case ".docx" -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-//			case ".eot" -> "application/vnd.ms-fontobject";
-//			case ".epub" -> "application/epub+zip";
-//			case ".gz" -> "application/gzip";
-//			case ".gif" -> "image/gif";
-//			case ".htm" -> "text/html";
-//			case ".html" -> "text/html";
-//			case ".ico" -> "image/vnd.microsoft.icon";
-//			case ".ics" -> "text/calendar";
-//			case ".jar" -> "application/java-archive";
-//			case ".jpg" -> "image/jpeg";
-//			case ".jpeg" -> "image/jpeg";
-//			case ".js" -> "text/javascript";
-//			case ".json" -> "application/json";
-//			case ".jsonld" -> "application/ld+json";
-//			case ".mid" -> "audio/midi audio/x-midi";
-//			case ".midi" -> "audio/midi audio/x-midi";
-//			case ".mjs" -> "text/javascript";
-//			case ".mp3" -> "audio/mpeg";
-//			case ".mpeg" -> "audio/mpeg";
-//			case ".mpkg" -> "application/vnd.apple.installer+xml";
-//			case ".odp" -> "application/vnd.oasis.opendocument.presentation";
-//			case ".ods" -> "application/vnd.oasis.opendocument.spreadsheet";
-//			case ".odt" -> "application/vnd.oasis.opendocument.text";
-//			case ".oga" -> "audio/ogg";
-//			case ".ogv" -> "video/ogg";
-//			case ".ogx" -> "application/ogg";
-//			case ".opus" -> "audio/opus";
-//			case ".otf" -> "font/otf";
-//			case ".png" -> "image/png";
-//			case ".pdf" -> "application/pdf";
-//			case ".php" -> "application/php";
-//			case ".ppt" -> "application/vnd.ms-powerpoint";
-//			case ".pptx" -> "application/vnd.openxmlformats-officedocument.presentationml.presentation";
-//			case ".rar" -> "application/x-rar-compressed";
-//			case ".rtf" -> "application/rtf";
-//			case ".sh" -> "application/x-sh";
-//			case ".svg" -> "image/svg+xml";
-//			case ".swf" -> "application/x-shockwave-flash";
-//			case ".tar" -> "application/x-tar";
-//			case ".tif" -> "image/tiff";
-//			case ".tiff" -> "image/tiff";
-//			case ".ts" -> "video/mp2t";
-//			case ".ttf" -> "font/ttf";
-//			case ".txt" -> "text/plain";
-//			case ".vsd" -> "application/vnd.visio";
-//			case ".wav" -> "audio/wav";
-//			case ".weba" -> "audio/webm";
-//			case ".webm" -> "video/webm";
-//			case ".webp" -> "image/webp";
-//			case ".woff" -> "font/woff";
-//			case ".woff2" -> "font/woff2";
-//			case ".xhtml" -> "application/xhtml+xml";
-//			case ".xls" -> "application/vnd.ms-excel";
-//			case ".xlsx" -> "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-//			case ".xml" -> "application/xml"; // or "text/xml"; idk
-//			case ".xul" -> "application/vnd.mozilla.xul+xml";
-//			case ".zip" -> "application/zip";
-//			case ".3gp" -> "video/3gpp"; // or "audio/3gpp"; idk
-//			case ".3g2" -> "video/3gpp2"; // or "audio/3gpp2"; idk
-//			case ".7z" -> "application/x-7z-compressed";
-//			default -> "application/octet-stream";
-//		};
-//	}
+    
+    private static final Map<String, String> mimeExtenstionMap = new HashMap<String, String> () {{
+        put ("aac", "audio/aac");
+        put ("abw", "application/x-abiword");
+        put ("arc", "application/x-freearc");
+        put ("avi", "video/x-msvideo");
+        put ("azw", "application/vnd.amazon.ebook");
+        put ("bin", "application/octet-stream");
+        put ("bmp", "image/bmp");
+        put ("bz", "application/x-bzip");
+        put ("bz2", "application/x-bzip2");
+        put ("csh", "application/x-csh");
+        put ("css", "text/css");
+        put ("csv", "text/csv");
+        put ("doc", "application/msword");
+        put ("docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+        put ("eot", "application/vnd.ms-fontobject");
+        put ("epub", "application/epub+zip");
+        put ("gz", "application/gzip");
+        put ("gif", "image/gif");
+        put ("htm", "text/html");
+        put ("html", "text/html");
+        put ("ico", "image/vnd.microsoft.icon");
+        put ("ics", "text/calendar");
+        put ("jar", "application/java-archive");
+        put ("jpg", "image/jpeg");
+        put ("jpeg", "image/jpeg");
+        put ("js", "text/javascript");
+        put ("json", "application/json");
+        put ("jsonld", "application/ld+json");
+        put ("mid", "audio/midi audio/x-midi");
+        put ("midi", "audio/midi audio/x-midi");
+        put ("mjs", "text/javascript");
+        put ("mp3", "audio/mpeg");
+        put ("mpeg", "audio/mpeg");
+        put ("mpkg", "application/vnd.apple.installer+xml");
+        put ("odp", "application/vnd.oasis.opendocument.presentation");
+        put ("ods", "application/vnd.oasis.opendocument.spreadsheet");
+        put ("odt", "application/vnd.oasis.opendocument.text");
+        put ("oga", "audio/ogg");
+        put ("ogv", "video/ogg");
+        put ("ogx", "application/ogg");
+        put ("opus", "audio/opus");
+        put ("otf", "font/otf");
+        put ("png", "image/png");
+        put ("pdf", "application/pdf");
+        put ("php", "application/php");
+        put ("ppt", "application/vnd.ms-powerpoint");
+        put ("pptx", "application/vnd.openxmlformats-officedocument.presentationml.presentation");
+        put ("rar", "application/x-rar-compressed");
+        put ("rtf", "application/rtf");
+        put ("sh", "application/x-sh");
+        put ("svg", "image/svg+xml");
+        put ("swf", "application/x-shockwave-flash");
+        put ("tar", "application/x-tar");
+        put ("tif", "image/tiff");
+        put ("tiff", "image/tiff");
+        put ("ts", "video/mp2t");
+        put ("ttf", "font/ttf");
+        put ("txt", "text/plain");
+        put ("vsd", "application/vnd.visio");
+        put ("wav", "audio/wav");
+        put ("weba", "audio/webm");
+        put ("webm", "video/webm");
+        put ("webp", "image/webp");
+        put ("woff", "font/woff");
+        put ("woff2", "font/woff2");
+        put ("xhtml", "application/xhtml+xml");
+        put ("xls", "application/vnd.ms-excel");
+        put ("xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        put ("xml", "application/xml"); // or "text/xml"; idk
+        put ("xul", "application/vnd.mozilla.xul+xml");
+        put ("zip", "application/zip");
+        put ("3gp", "video/3gpp"); // or "audio/3gpp"; idk
+        put ("3g2", "video/3gpp2"); // or "audio/3gpp2"; idk
+        put ("7z", "application/x-7z-compressed");
+    }};
+    
+    // https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Complete_list_of_MIME_types
+    private String getMimeFromExtension (String extension) {
+        return mimeExtenstionMap.getOrDefault (extension, "application/octet-stream");
+    }
 }
