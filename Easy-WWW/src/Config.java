@@ -16,7 +16,7 @@ enum ConfigEntry {
         "// Served directory"
     ),
     openInBrowser ("openInBrowser", "true",
-        "// Should the website root be opened in default browser on server start"
+        "// Should the program attempt to open the website root in default browser on server start"
     );
     
     public final String key;

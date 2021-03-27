@@ -239,7 +239,11 @@ public class WebServer {
         System.out.printf ("Started server at %s\n", s.getAddress ());
         
         if (Config.getBoolean (ConfigEntry.openInBrowser) && Desktop.isDesktopSupported ()) {
-            Desktop.getDesktop ().browse (new URI (String.format ("http://%s", s.getAddress ())));
+            if (Desktop.getDesktop ().isSupported (Desktop.Action.BROWSE)) {
+                Desktop.getDesktop ().browse (new URI (String.format ("http://%s", s.getAddress ())));
+            } else {
+                System.out.println ("'openInBrowser' is enabled, but your desktop doesn't support that");
+            }
         }
         
     }
