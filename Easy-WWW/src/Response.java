@@ -13,6 +13,7 @@ public class Response {
     private int statusCode;
     private String statusMessage;
     private Map<String, String> headers;
+    private Map<String, String> binaryHeaders;
     private String body;
     private byte[] binaryBody;
     
@@ -22,6 +23,7 @@ public class Response {
     public Response () {
         setStatus (Status.NotImplemented_501);
         headers = new HashMap<String, String> ();
+        binaryHeaders = new HashMap<String, String> ();
         body = "";
         binaryBody = new byte[0];
     }
@@ -209,6 +211,8 @@ public class Response {
                         // It's a file
                         try {
                             binaryBody = Files.readAllBytes (path);
+                            
+                            binaryHeaders.put ("Content-Length", String.valueOf (binaryBody.length));
                             setStatus (Status.OK_200);
                         } catch (Exception e) {
                             setStatus (Status.InternalServerError_500);
@@ -273,6 +277,14 @@ public class Response {
         for (Map.Entry<String, String> header : headers.entrySet ()) {
             output.append (String.format ("%s: %s\r\n", header.getKey (), header.getValue ()));
         }
+        
+        if (body == null) {
+            // Binary headers, if binary body is being sent
+            for (Map.Entry<String, String> header : binaryHeaders.entrySet ()) {
+                output.append (String.format ("%s: %s\r\n", header.getKey (), header.getValue ()));
+            }
+        }
+        
         output.append ("\r\n");
         
         // Body
