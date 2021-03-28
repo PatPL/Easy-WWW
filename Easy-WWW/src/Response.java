@@ -208,6 +208,11 @@ public class Response {
                 
                 if (file.exists ()) {
                     if (file.isDirectory ()) {
+                        if (new File (pathString + "/index.html").exists ()) {
+                            setBody (value.endsWith ("/") ? value + "index.html" : value + "/index.html", BodyType.Path);
+                            return;
+                        }
+                        
                         setStatus (Status.NotImplemented_501);
                         setBody (String.format ("Resource <b>%s</b> is a directory. No support for that yet", value), BodyType.HTML);
                     } else {

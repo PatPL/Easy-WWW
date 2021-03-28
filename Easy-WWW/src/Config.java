@@ -18,12 +18,8 @@ enum ConfigEntry {
             "//   root = html" + System.lineSeparator () +
             "//   root = ./html/" + System.lineSeparator () +
             "//   root = html/" + System.lineSeparator () +
-            "//   root = /." + System.lineSeparator () +
-            "//   root = ." + System.lineSeparator () +
-            "//   This value DOESN'T support absolute paths." + System.lineSeparator () +
-            "//   Following example will point to the current directory" + System.lineSeparator () +
-            "//   just like the two previous examples" + System.lineSeparator () +
-            "//   root = /"
+            "//   root = ./" + System.lineSeparator () +
+            "//   root = ."
     ),
     openInBrowser ("openInBrowser", "true",
         "// Should the program attempt to open the website root in default browser on server start"
