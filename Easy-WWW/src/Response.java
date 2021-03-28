@@ -16,6 +16,7 @@ public class Response {
     private Map<String, String> binaryHeaders;
     private String body;
     private byte[] binaryBody;
+    public String websiteRoot = null;
     
     /**
      * Returns a new Webserver.Response object with empty body and default [Status.NotImplemented_501] status
@@ -188,11 +189,13 @@ public class Response {
                     value = ".";
                 }
                 
-                if (value.startsWith ("/")) {
-                    value = String.format (".%s", value);
+                Path path = Path.of (value);
+                
+                if (websiteRoot != null) {
+                    path = Path.of (websiteRoot, path.toString ());
                 }
                 
-                Path path = Path.of (value).toAbsolutePath ().normalize ();
+                path = path.toAbsolutePath ().normalize ();
                 String pathString = path.toString ();
                 
                 // While it will also falsely 'find' extensions if both the directory name has a dot,
@@ -222,7 +225,7 @@ public class Response {
                     }
                 } else {
                     setStatus (Status.NotFound_404);
-                    setBody (String.format ("Resource <b>%s</b> doesn't exist", value), BodyType.HTML);
+                    setBody (String.format ("Resource at <b>%s</b> doesn't exist", value), BodyType.HTML);
                 }
                 
                 break;

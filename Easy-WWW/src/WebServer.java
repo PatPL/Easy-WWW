@@ -14,6 +14,7 @@ public class WebServer {
     private final ServerSocket server;
     private final Thread listenerThread;
     private boolean running = false;
+    private String websiteRoot = null;
     
     public interface ServerHandler {
         /**
@@ -212,7 +213,13 @@ public class WebServer {
             }
         }
         
+        if (websiteRoot != null) {
+            res.websiteRoot = websiteRoot;
+            res.setBody (req.URI, Response.BodyType.Path);
+        }
+        
         res.setHeader ("Requested-URI", req.URI);
+        res.setHeader ("Server", "Easy-WWW");
 //        System.out.printf (
 //            // https://en.wikipedia.org/wiki/ANSI_escape_code
 //            "|>\033[93m%s\n\033[91m<<<<<<<< INBOUND\033[0m\n%s\n\033[32m>>>>>>>> OUTBOUND\033[0m\n%s\n\033[96m****************\033[0m\n\n",
@@ -234,6 +241,8 @@ public class WebServer {
             System.out.printf ("Couldn't start the server.\n%s\n", e);
             return;
         }
+        
+        s.websiteRoot = Config.getString (ConfigEntry.root);
         
         s.start ();
         System.out.printf ("Started server at %s\n", s.getAddress ());
