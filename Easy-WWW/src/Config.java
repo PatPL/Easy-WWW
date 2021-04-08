@@ -12,14 +12,49 @@ enum ConfigEntry {
         "// TCP port which the server will use" + System.lineSeparator () +
             "//   80 - HTTP"
     ),
-    root ("root", "./",
-        "// RELATIVE path to the served directory. Valid examples:" + System.lineSeparator () +
-            "//   root = ./html" + System.lineSeparator () +
-            "//   root = html" + System.lineSeparator () +
-            "//   root = ./html/" + System.lineSeparator () +
-            "//   root = html/" + System.lineSeparator () +
-            "//   root = ./" + System.lineSeparator () +
-            "//   root = ."
+    defaultRoot ("defaultRoot", "./",
+        "// RELATIVE path to the default served directory. Valid examples:" + System.lineSeparator () +
+            "//   defaultRoot = ./html" + System.lineSeparator () +
+            "//   defaultRoot = html" + System.lineSeparator () +
+            "//   defaultRoot = ./html/" + System.lineSeparator () +
+            "//   defaultRoot = html/" + System.lineSeparator () +
+            "//   defaultRoot = ./" + System.lineSeparator () +
+            "//   defaultRoot = ." + System.lineSeparator () +
+            "//   defaultRoot = ../html" + System.lineSeparator () +
+            "//   defaultRoot = ../../../my_website/html"
+    ),
+    subdomainRoot ("subdomainRoot", ":",
+        "// Optional additional roots tied to subdomains." + System.lineSeparator () +
+            "// Multiple entries are allowed." + System.lineSeparator () +
+            "// [hostname] - hostname which your DNS resolves to the address set in [address]" + System.lineSeparator () +
+            "// for example, [hostname] = localhost, for [address] = 127.0.0.1" + System.lineSeparator () +
+            "// Site has to be accessed using [hostname] for this matching to work. Directly, using IP won't work." + System.lineSeparator () +
+            "// Examples (where [hostname] = localhost):" + System.lineSeparator () +
+            "//   subdomainRoot:images = ./img - images.localhost uses ./img root path, regardless of [defaultRoot]" + System.lineSeparator () +
+            "//   subdomainRoot:other = ../../my_other_website/html - other.localhost uses ../../my_other_website/html root path" + System.lineSeparator () +
+            "//   subdomainRoot:images.other = ../../my_other_website/img - you can combine the subdomains" + System.lineSeparator () +
+            "//   subdomainRoot:more:colons:are:allowed = ./examples - The config handles additional colons (more:colons:are:allowed.localhost)"
+    ),
+    redirectToMatchedSubdomain ("redirectToMatchedSubdomain", "true",
+        "// Should the server redirect the browser precisely to the subdomain it chose to match, if there's a mismatch" + System.lineSeparator () +
+            "// Example 1 (no subdomains set): " + System.lineSeparator () +
+            "//   [hostname] (no redirection)" + System.lineSeparator () +
+            "//   www.[hostname] -> [hostname]" + System.lineSeparator () +
+            "//   aaa.bbb.[hostname] -> [hostname]" + System.lineSeparator () +
+            "// Example 2 (all examples from [subdomainRoot] are set):" + System.lineSeparator () +
+            "//   [hostname] (no redirection)" + System.lineSeparator () +
+            "//   images.[hostname] (no redirection)" + System.lineSeparator () +
+            "//   images.aaa.bbb.[hostname] -> [hostname]" + System.lineSeparator () +
+            "//   aaa.bbb.images.[hostname] -> images.[hostname]" + System.lineSeparator () +
+            "//   images.other.[hostname] (no redirection)" + System.lineSeparator () +
+            "//   other.images.[hostname] -> images.[hostname]" + System.lineSeparator () +
+            "//   images.aaa.bbb.other.[hostname] -> other.[hostname]"
+    ),
+    hostname ("hostname", "localhost",
+        "// Valid domain name, that resolves to [address]" + System.lineSeparator () +
+            "// Can be ignored, if not specified otherwise below:" + System.lineSeparator () +
+            "// * It has to be set correctly, if [redirectToMatchedSubdomain] = true" + System.lineSeparator () +
+            "// * It has to be set correctly, if any [subdomainRoot] is set"
     ),
     openInBrowser ("openInBrowser", "true",
         "// Should the program attempt to open the website root in default browser on server start"
@@ -30,7 +65,7 @@ enum ConfigEntry {
     public final String comment;
     
     ConfigEntry (String key, String defaultValue, String comment) {
-        this.key = key;
+        this.key = key.replaceAll (":", "");
         this.defaultValue = defaultValue;
         this.comment = comment;
     }
@@ -88,6 +123,40 @@ public class Config {
     public static String getString (ConfigEntry key) {
         loadConfig ();
         return config.get (key.key);
+    }
+    
+    public static void setMap (ConfigEntry key, Map<String, String> value) {
+        StringBuilder serializedMap = new StringBuilder ();
+        serializedMap.append (":");
+        
+        for (Map.Entry<String, String> i : value.entrySet ()) {
+            serializedMap.append (i.getKey ().replaceAll (":", "%3A"));
+            serializedMap.append (":");
+            serializedMap.append (i.getValue ().replaceAll (":", "%3A"));
+            serializedMap.append (":");
+        }
+        
+        setString (key, serializedMap.toString ());
+    }
+    
+    public static Map<String, String> getMap (ConfigEntry key) {
+        String[] parts = getString (key).split (":");
+        // Serialized maps start and end with ":"
+        // split() includes an empty string as the array's first element
+        if (parts.length % 2 != 1) {
+            System.out.println ("[ERROR] bad map");
+        }
+        
+        HashMap<String, String> output = new HashMap<String, String> ();
+        
+        for (int i = 1; i < parts.length; i += 2) {
+            output.put (
+                parts[i].replaceAll ("%3A", ":"),
+                parts[i + 1].replaceAll ("%3A", ":")
+            );
+        }
+        
+        return output;
     }
     
     private static void loadConfig () {
@@ -152,7 +221,22 @@ public class Config {
                 continue;
             }
             
-            config.put (key, value);
+            if (key.contains (":")) {
+                // It's a map
+                String[] keyParts = key.split (":", 2);
+                String mainKey = keyParts[0].trim ();
+                String mapKey = keyParts[1].trim ();
+                
+                config.put (mainKey, String.format (
+                    "%s%s:%s:",
+                    config.getOrDefault (mainKey, ":"),
+                    mapKey.replaceAll (":", "%3A"),
+                    value.replaceAll (":", "%3A")
+                ));
+            } else {
+                // It's a regular value
+                config.put (key, value);
+            }
             
         }
         
@@ -172,12 +256,28 @@ public class Config {
         
         for (ConfigEntry key : ConfigEntry.values ()) {
             try {
+                String value = config.get (key.key);
+                
                 writer.write (key.comment);
                 writer.write (System.lineSeparator ());
-                writer.write (key.key);
-                writer.write (" = ");
-                writer.write (config.get (key.key));
-                writer.write (System.lineSeparator ());
+                if (value.startsWith (":")) {
+                    // It's a serialized map
+                    Map<String, String> parsed = getMap (key);
+                    for (var i : parsed.entrySet ()) {
+                        writer.write (key.key);
+                        writer.write (":");
+                        writer.write (i.getKey ());
+                        writer.write (" = ");
+                        writer.write (i.getValue ());
+                        writer.write (System.lineSeparator ());
+                    }
+                } else {
+                    // It's a regular value
+                    writer.write (key.key);
+                    writer.write (" = ");
+                    writer.write (value);
+                    writer.write (System.lineSeparator ());
+                }
                 writer.write (System.lineSeparator ());
                 
             } catch (IOException e) {

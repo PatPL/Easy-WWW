@@ -6,15 +6,15 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
-import java.util.SortedMap;
-import java.util.TreeMap;
+import java.util.List;
+import java.util.*;
 
 public class WebServer {
     
     private final ServerSocket server;
     private final Thread listenerThread;
     private boolean running = false;
-    private String websiteRoot = null;
+    private String defaultWebsiteRoot = null;
     
     public interface ServerHandler {
         /**
@@ -213,9 +213,71 @@ public class WebServer {
             }
         }
         
-        if (websiteRoot != null) {
-            res.websiteRoot = websiteRoot;
-            res.setBody (req.URI, Response.BodyType.Path);
+        String host = req.headers.getOrDefault ("Host", "");
+        String domain = Config.getString (ConfigEntry.hostname);
+        if (host.equals (domain)) {
+            // Before anything else, check if by any chance the browser is
+            // already asking for the main domain
+            if (defaultWebsiteRoot != null) {
+                res.websiteRoot = defaultWebsiteRoot;
+                res.setBody (req.URI, Response.BodyType.Path);
+            }
+        } else if (host.endsWith (Config.getString (ConfigEntry.hostname))) {
+            // Site accessed by hostname. Continue matching.
+            Map<String, String> subdomains = Config.getMap (ConfigEntry.subdomainRoot);
+            
+            int lastDotIndex = -1;
+            List<Integer> dotIndices = new ArrayList<Integer> ();
+            dotIndices.add (-1);
+            
+            while ((lastDotIndex = host.indexOf (".", lastDotIndex + 1)) >= 0) {
+                if (lastDotIndex >= 0) {
+                    dotIndices.add (lastDotIndex);
+                }
+            }
+            
+            int domainStartIndex = host.length () - domain.length ();
+            String bestSubdomainMatch = "";
+            String bestSubdomainMatchRoot = defaultWebsiteRoot;
+            outerLoop:
+            for (int i = 0; i < dotIndices.size (); ++i) {
+                int startIndex = dotIndices.get (i) + 1;
+                if (startIndex >= domainStartIndex) {
+                    // substring now only contains the domain
+                    break;
+                }
+                
+                String subdomainCandidate = host.substring (startIndex, domainStartIndex);
+                for (Map.Entry<String, String> subdomain : subdomains.entrySet ()) {
+                    if (subdomainCandidate.equals (subdomain.getKey () + ".")) {
+                        bestSubdomainMatch = subdomain.getKey () + ".";
+                        bestSubdomainMatchRoot = subdomain.getValue ();
+                        break outerLoop;
+                    }
+                }
+            }
+            
+            if (
+                !Config.getBoolean (ConfigEntry.redirectToMatchedSubdomain) ||
+                    String.format ("%s%s", bestSubdomainMatch, domain).equals (host)
+            ) {
+                // Correct host
+                if (bestSubdomainMatchRoot != null) {
+                    res.websiteRoot = bestSubdomainMatchRoot;
+                    res.setBody (req.URI, Response.BodyType.Path);
+                }
+            } else {
+                // Incorrect host. Redirect the browser
+                res.setHeader ("Location", String.format ("//%s%s%s", bestSubdomainMatch, domain, req.URI));
+                res.setStatus (Status.SeeOther_303);
+            }
+            
+        } else {
+            // Site accessed in other way. No subdomain matching
+            if (defaultWebsiteRoot != null) {
+                res.websiteRoot = defaultWebsiteRoot;
+                res.setBody (req.URI, Response.BodyType.Path);
+            }
         }
         
         res.setHeader ("Requested-URI", req.URI);
@@ -242,7 +304,7 @@ public class WebServer {
             return;
         }
         
-        s.websiteRoot = Config.getString (ConfigEntry.root);
+        s.defaultWebsiteRoot = Config.getString (ConfigEntry.defaultRoot);
         
         s.start ();
         System.out.printf ("Started server at %s\n", s.getAddress ());
